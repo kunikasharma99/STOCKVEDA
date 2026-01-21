@@ -137,3 +137,19 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# --- Python Specific ---
+venv/
+ai_server/venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# --- Environment Secrets ---
+.env
+.python-version
+
+# --- Node.js Specific ---
+node_modules/
+server/node_modules/
+client/node_modules/
