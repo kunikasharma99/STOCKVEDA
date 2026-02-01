@@ -1,3 +1,4 @@
+console.log(" index.js loaded");
 const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
@@ -23,6 +24,7 @@ mongoose.connect(DB_URI, {
         process.exit(1); // Stop the app if we can't connect
     });
 
+// POST ROUTES
 // Single Stock Insert Route
 app.post('/api/stocks', async(req, res) => {
     try {
@@ -40,17 +42,17 @@ app.post('/api/stocks', async(req, res) => {
 });
 
 // Bulk Insert Route
-app.post('/api/stocks/bulk', async (req, res) => {
+app.post('/api/stocks/bulk', async(req, res) => {
     try {
         // Ensure the body is an array
         const stocksArray = req.body;
-        
+
         if (!Array.isArray(stocksArray)) {
             return res.status(400).json({ message: "Request body must be an array of stocks" });
         }
 
         // insertMany sends everything in ONE network request to Atlas
-        const savedStocks = await UserStock.insertMany(stocksArray, { 
+        const savedStocks = await UserStock.insertMany(stocksArray, {
             ordered: true // Set to false if you want to continue even if one doc fails
         });
 
@@ -60,5 +62,102 @@ app.post('/api/stocks/bulk', async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({ message: "Error in bulk insert", error: error.message });
+    }
+});
+
+// GET ROUTES
+
+// Health check
+app.get('/api/ai/health', (req, res) => {
+    res.status(200).json({
+        status: "Node Gateway is online",
+        ai_service: "Waiting for connection..."
+    });
+});
+
+
+// Fetch stock by MongoDB _id
+// GET /api/stocks/id/:id
+app.get('/api/stocks/id/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid stock ID" });
+        }
+
+        const stock = await UserStock.findById(id);
+
+        if (!stock) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stock);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// Fetch stock details by ticker
+// GET /api/stocks/detail/:ticker
+app.get('/api/stocks/detail/:ticker', async(req, res) => {
+    try {
+        const { ticker } = req.params;
+
+        const stockDetail = await UserStock.findOne({
+            ticker: ticker.toUpperCase()
+        });
+
+        if (!stockDetail) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stockDetail);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// Filter stocks by category for a user
+// GET /api/stocks/filter/:userId/:category
+app.get('/api/stocks/filter/:userId/:category', async(req, res) => {
+    try {
+        const { userId, category } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const stocks = await UserStock.find({
+            userId: new mongoose.Types.ObjectId(userId),
+            category: category.toLowerCase()
+        });
+
+        res.status(200).json(stocks);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// Fetch ALL stocks for a user (Dashboard)
+// GET /api/stocks/user/:userId
+app.get('/api/stocks/user/:userId', async(req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const stocks = await UserStock.find({
+            userId: new mongoose.Types.ObjectId(userId)
+        });
+
+        res.status(200).json(stocks);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
