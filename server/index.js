@@ -161,3 +161,206 @@ app.get('/api/stocks/user/:userId', async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
+
+//PUT ROUTES
+
+//CASE 1: Update stock category(wishlist <-> holding)
+app.put('/api/stocks/:id/category', async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { category } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid stockId" });
+        }
+
+        if (!category) {
+            return res.status(400).json({ message: "Category is required" });
+        }
+
+        const stock = await UserStock.findByIdAndUpdate(
+            id, { category: category.toLowerCase() }, { new: true }
+        );
+
+        if (!stock) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stock);
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//CASE 2: Update quantity & avgPrice (buy / update holding)
+app.put('/api/stocks/:id/holding', async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { quantity, avgPrice } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid stock id" });
+        }
+
+        const stock = await UserStock.findByIdAndUpdate(
+            id, {
+                quantity,
+                avgPrice,
+                category: "holding"
+            }, { new: true }
+        );
+
+        if (!stock) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stock);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//CASE 3: Move stock to wishlist (reset holding)
+app.put('/api/stocks/:id/wishlist', async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid stock id" });
+        }
+
+        const stock = await UserStock.findByIdAndUpdate(
+            id, { quantity: 0, avgPrice: 0, category: "wishlist" }, { new: true }
+        );
+
+        if (!stock) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stock);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//CASE 4: Update aiReport only
+app.put('/api/stocks/:id/ai-report', async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { aiReport } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid stock id" });
+        }
+
+        const stock = await UserStock.findByIdAndUpdate(
+            id, { aiReport }, { new: true }
+        );
+
+        if (!stock) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stock);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//CASE 5: Update stock by userId + ticker
+app.put('/api/stocks/user/:userId/ticker/:ticker', async(req, res) => {
+    try {
+        const { userId, ticker } = req.params;
+        const updateData = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const stock = await UserStock.findOneAndUpdate({ userId, ticker },
+            updateData, { new: true }
+        );
+
+        if (!stock) {
+            return res.status(404).json({ message: "Stock not found" });
+        }
+
+        res.status(200).json(stock);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//CASE 6: Bulk update category (All from wishlist -> holding)
+app.put('/api/stocks/user/:userId/category', async(req, res) => {
+    try {
+        const { userId } = req.params;
+        const { from, to } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const result = await UserStock.updateMany({ userId, category: from }, { category: to });
+
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//DELETER ROUTES
+//Case 1: Delete by Mongo _id
+app.delete('/api/stocks/id/:id', async(req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid stock ID" });
+        }
+
+        const deletedStock = await UserStock.findByIdAndDelete(id);
+        if (!deletedStock) return res.status(404).json({ message: "Stock not found" });
+
+        res.status(200).json({ message: "Stock deleted successfully", deletedStock });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//Case 2: Delete by userId + ticker
+app.delete('/api/stocks/user/:userId/ticker/:ticker', async(req, res) => {
+    try {
+        const { userId, ticker } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const deletedStock = await UserStock.findOneAndDelete({
+            userId: new mongoose.Types.ObjectId(userId),
+            ticker: ticker.toUpperCase()
+        });
+
+        if (!deletedStock) return res.status(404).json({ message: "Stock not found" });
+
+        res.status(200).json({ message: "Stock deleted successfully", deletedStock });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+//Case 3: Delete all stocks for a user
+app.delete('/api/stocks/user/:userId', async(req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const result = await UserStock.deleteMany({ userId: new mongoose.Types.ObjectId(userId) });
+
+        res.status(200).json({ message: `Deleted ${result.deletedCount} stocks for user` });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
