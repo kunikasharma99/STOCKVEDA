@@ -6,7 +6,11 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 const UserStock = require('./models/userStock-schema');
+const User = require('./models/User-schema');
+const authRouter = require('./routes/auth');
 
+// mount auth routes
+app.use('/api/auth', authRouter);
 
 // Replace with your Atlas Connection String in a .env file
 const DB_URI = process.env.MONGO_URI;
