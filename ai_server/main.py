@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from fastapi import FastAPI
 from pydantic import BaseModel
+from schemas.stock import StockAnalysisRequest, StockAnalysisResponse
 
 # 1. Load Environment & Setup FastAPI
 load_dotenv() # This loads the .env file
@@ -28,11 +29,14 @@ class AnalysisRequest(BaseModel):
 def health():
     return {"status": "online", "database": "connected"}
 
-@app.post("/analyze")
-async def analyze(request: AnalysisRequest):
-    # Dummy logic for Monday; Llama 3 goes here on Wednesday!
+@app.post("/analyze", response_model=StockAnalysisResponse)
+async def analyze_stock(request: StockAnalysisRequest):
+    # For now, we return "mock" data to test the schema
     return {
-        "ticker": request.ticker.upper(),
-        "recommendation": "STABLE",
-        "analysis": "Python Brain is successfully receiving data from Node.js."
+        "ticker": request.ticker,
+        "verdict": "BUY",
+        "confidence": 0.85,
+        "technical_score": 0.9,
+        "sentiment_score": 0.7,
+        "reasoning": f"Placeholder analysis for {request.ticker}"
     }
